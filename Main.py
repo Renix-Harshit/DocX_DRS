@@ -11,6 +11,9 @@ from langchain.chains import create_retrieval_chain
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from dotenv import load_dotenv
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 load_dotenv()
 
@@ -55,14 +58,16 @@ def process_documents(uploaded_files):
             docs.append(text)
     return docs
 
-# Function to generate 5 unique suggestions per document
-def generate_suggestions(docs):
+# Function to generate keyword suggestions using TF-IDF
+def generate_suggestions(docs, top_n=5):
     suggestions = []
     for doc in docs:
-        splitter = RecursiveCharacterTextSplitter()
-        chunks = splitter.split_text(doc)
-        suggestions.append(list(set(chunks[:5])))  # Get first 5 unique chunks
+        tfidf = TfidfVectorizer(stop_words='english', max_features=top_n)
+        tfidf_matrix = tfidf.fit_transform([doc])
+        keywords = tfidf.get_feature_names_out()
+        suggestions.append(list(keywords))
     return suggestions
+
 
 # File uploader
 uploaded_files = st.file_uploader("Upload up to 3 Documents (PDF, JPG, PNG)", type=["pdf", "png", "jpg"], accept_multiple_files=True)
@@ -74,8 +79,8 @@ if uploaded_files:
 
     docs = process_documents(uploaded_files)
     st.success("Documents processed successfully!")
-    suggestions = generate_suggestions(docs)
 
+    suggestions = generate_suggestions(docs)
     st.write("Here are 5 unique keyword suggestions per document:")
     for i, doc_suggestions in enumerate(suggestions, start=1):
         st.write(f"Document {i} Suggestions: {doc_suggestions}")
@@ -119,3 +124,4 @@ with st.sidebar:
         - Responsive and user-friendly design
     """)
     st.write("Made with ❤️ by Harshit")
+
